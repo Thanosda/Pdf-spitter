@@ -1,4 +1,32 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Theme Toggle ---
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('i');
+    
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('pdf-splitter-theme', theme);
+        if (theme === 'light') {
+            themeIcon.className = 'fa-solid fa-sun';
+        } else {
+            themeIcon.className = 'fa-solid fa-moon';
+        }
+        // Update meta theme-color for mobile status bar
+        const metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) {
+            metaTheme.content = theme === 'light' ? '#f4f6fb' : '#09090b';
+        }
+    }
+
+    // Load saved theme or default to dark
+    const savedTheme = localStorage.getItem('pdf-splitter-theme') || 'dark';
+    setTheme(savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        setTheme(current === 'light' ? 'dark' : 'light');
+    });
+
     // --- State ---
     let currentFile = null;
     let currentPdfDoc = null;
@@ -6,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let totalPages = 0;
     let splitFiles = [];
     let zipBlob = null;
+
     
     // --- DOM Elements ---
     const screens = {
