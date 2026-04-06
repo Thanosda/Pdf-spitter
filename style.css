@@ -184,10 +184,12 @@ main {
     flex: 1;
     padding: 0 var(--space-md);
     overflow-y: auto;
+    overflow-x: hidden;
     /* Remove fixed bottom padding since we're using flexbox for bottom bar */
     display: flex;
     flex-direction: column;
-    /* Smooth scrolling for iOS */
+    /* smooth scroll and safe gutters */
+    scrollbar-gutter: stable; 
     -webkit-overflow-scrolling: touch;
 }
 
@@ -428,16 +430,18 @@ main.content-center {
 }
 
 .option-card {
-    padding: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
     margin-bottom: var(--space-sm);
     display: flex;
-    gap: var(--space-sm);
+    align-items: center;
+    gap: var(--space-md); /* Increased gap */
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
     overflow: hidden;
     user-select: none;
     touch-action: manipulation;
+    min-height: 84px; /* Increased height */
 }
 
 .option-card.active {
@@ -457,7 +461,13 @@ main.content-center {
 }
 
 .radio-custom {
-    padding-top: 2px;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
 }
 
 .radio-custom input {
@@ -474,28 +484,39 @@ main.content-center {
     content: '';
     position: absolute;
     left: 0;
-    top: 2px;
-    width: 20px;
-    height: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
     border: 2px solid var(--text-secondary);
     border-radius: 50%;
     transition: all 0.2s;
+    box-sizing: border-box;
 }
 
 .option-card.active .radio-custom label:before {
     border-color: var(--accent-color);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
 }
 
 .option-card.active .radio-custom label:after {
     content: '';
     position: absolute;
-    top: 7px;
-    left: 5px;
+    top: 50%;
+    left: 6px;
+    transform: translateY(-50%) scale(1);
     width: 10px;
     height: 10px;
     border-radius: 50%;
     background: var(--accent-color);
     animation: popIn 0.2s ease-out forwards;
+}
+
+.option-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .option-content h4 {
@@ -509,56 +530,136 @@ main.content-center {
     font-size: 0.85rem;
 }
 
-/* Range Input Form */
-.range-inputs {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-top: var(--space-md);
-    transition: opacity 0.3s;
+/* Range Inputs Panel (below option cards) */
+.range-inputs-panel {
+    background: var(--glass-bg);
+    border: 1px solid var(--accent-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin: 4px 0 var(--space-lg); /* More bottom margin */
+    overflow: hidden;
+    position: relative;
+    /* Animate in when active */
+    max-height: 500px; /* Big enough for everything */
+    opacity: 1;
+    z-index: 5;
+    transform: translateY(0);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.range-inputs.disabled {
-    opacity: 0.3;
+.range-inputs-panel::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 48px;
+    width: 12px;
+    height: 12px;
+    background: var(--bg-main); /* Match background for cut-out effect */
+    border-top: 1px solid var(--accent-color);
+    border-left: 1px solid var(--accent-color);
+    transform: rotate(45deg);
+    z-index: 6;
+}
+
+.range-inputs-panel.disabled {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-8px);
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
     pointer-events: none;
+    border-color: transparent;
 }
 
-.input-block {
+.range-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-sm);
+}
+
+.range-field {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    flex: 1;
+    gap: 8px;
 }
 
-.input-block label {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+.range-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-color);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 
-.input-block input {
+.range-field input[type="number"] {
+    width: 100%;
     background: var(--input-bg);
-    border: 1px solid var(--glass-border-light);
+    border: 1.5px solid var(--glass-border-light);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
-    padding: 10px 12px;
+    padding: 14px 12px;
     font-family: inherit;
-    font-size: 1rem;
+    font-size: 1.25rem;
+    font-weight: 600;
     text-align: center;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    /* Remove browser number arrows */
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
-.input-block input:focus {
+.range-field input.invalid {
+    border-color: var(--error-color);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.range-field input[type="number"]::-webkit-outer-spin-button,
+.range-field input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.range-field input[type="number"]:focus {
     outline: none;
     border-color: var(--accent-color);
-    background: rgba(139, 92, 246, 0.05);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    background: var(--glass-bg-hover);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
 }
 
-.range-divider {
-    color: var(--text-secondary);
-    margin-top: 24px;
+.range-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 52px;
+    flex-shrink: 0;
+    color: var(--accent-color);
+    font-size: 1rem;
+    margin-bottom: 2px;
+    filter: drop-shadow(0 0 5px rgba(139, 92, 246, 0.3));
+}
+
+/* Range Summary Badge inside card */
+.range-summary-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 4px 10px;
+    background: var(--accent-gradient);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.range-summary-badge span {
+    letter-spacing: 0.5px;
 }
 
 .password-input-wrapper {

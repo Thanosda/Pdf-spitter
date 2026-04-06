@@ -72,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDownloadAll = document.getElementById('btn-download-all');
     const btnStartOver = document.getElementById('btn-start-over');
     const toastEl = document.getElementById('toast');
+    const rangeSummaryBadge = document.getElementById('range-summary-badge');
+    const rangeSummaryText = document.getElementById('range-summary-text');
 
     // --- Screen Navigation ---
     function navigateTo(screenName) {
@@ -116,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
         optionCards.forEach(c => c.classList.remove('active'));
         document.getElementById('option-all').classList.add('active');
         rangeInputs.classList.add('disabled');
+        rangeInputs.classList.remove('active');
+        rangeSummaryBadge.classList.add('hidden');
         
         fileList.innerHTML = '';
     }
@@ -168,12 +172,45 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(radioId).checked = true;
             optionCards.forEach(c => c.classList.remove('active'));
             card.classList.add('active');
-            if (radioId === 'mode-range') rangeInputs.classList.remove('disabled');
-            else rangeInputs.classList.add('disabled');
+            if (radioId === 'mode-range') {
+                rangeInputs.classList.remove('disabled');
+                rangeInputs.classList.add('active');
+                updateRangeSummary();
+            } else {
+                rangeInputs.classList.add('disabled');
+                rangeInputs.classList.remove('active');
+                rangeSummaryBadge.classList.add('hidden');
+            }
         });
     });
 
     navBack.addEventListener('click', () => navigateTo('upload'));
+
+    // --- Range UI Logic ---
+    function updateRangeSummary() {
+        const start = parseInt(rangeStart.value) || 1;
+        const end = parseInt(rangeEnd.value) || totalPages;
+        
+        let isValid = true;
+        if (start < 1 || end > totalPages || start > end) {
+            isValid = false;
+            rangeStart.classList.toggle('invalid', start < 1 || start > end);
+            rangeEnd.classList.toggle('invalid', end > totalPages || start > end);
+            rangeSummaryBadge.classList.add('hidden');
+        } else {
+            rangeStart.classList.remove('invalid');
+            rangeEnd.classList.remove('invalid');
+            rangeSummaryText.textContent = `Pages ${start} - ${end} (${end - start + 1} chosen)`;
+            if (document.getElementById('mode-range').checked) {
+                rangeSummaryBadge.classList.remove('hidden');
+            }
+        }
+        btnSplit.disabled = !isValid && document.getElementById('mode-range').checked;
+    }
+
+    [rangeStart, rangeEnd].forEach(input => {
+        input.addEventListener('input', updateRangeSummary);
+    });
 
     async function loadPdf(file, password = '') {
         try {
@@ -190,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rangeEnd.placeholder = totalPages;
             rangeEnd.value = totalPages;
             rangeStart.value = 1;
+            updateRangeSummary();
             btnSplit.disabled = false;
         } catch (err) {
             if (err.message.includes('encrypted') || err.message.includes('password')) {
