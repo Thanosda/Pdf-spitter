@@ -1,199 +1,260 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#09090b">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09090b" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <title>PDF Splitter</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
     <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
     <!-- Browser-side PDF Processing -->
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div id="app-container">
-        
-        <!-- 📱 SCREEN 1: UPLOAD -->
-        <div id="screen-upload" class="screen active">
-            <header>
-                <h1>Upload PDF</h1>
-                <button id="theme-toggle" class="icon-btn theme-toggle" title="Toggle Theme">
-                    <i class="fa-solid fa-moon"></i>
-                </button>
-            </header>
-            
-            <main class="content-center">
-                <div class="glass-panel upload-area" id="upload-area">
-                    <div class="upload-icon">
-                        <i class="fa-solid fa-file-pdf"></i>
-                    </div>
-                    <h2>Select a file</h2>
-                    <p>Tap here or drag & drop</p>
-                    <p class="file-limits">Maximum size: 100MB</p>
-                    <input type="file" id="pdf-input" accept="application/pdf" hidden>
-                </div>
-                
-                <div id="selected-file-info" class="selected-file-info hidden">
-                    <div class="file-details">
-                        <i class="fa-solid fa-file-pdf"></i>
-                        <span id="file-name-display" class="truncate">filename.pdf</span>
-                        <button id="remove-file-btn" class="icon-btn" style="width:32px;height:32px;font-size:1rem;">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-                    <span id="file-size-display" class="file-size">2.4 MB</span>
-                </div>
-            </main>
-            
-            <footer class="bottom-bar">
-                <button id="btn-next-upload" class="btn primary-btn" disabled>
-                    Next <i class="fa-solid fa-arrow-right"></i>
-                </button>
-            </footer>
-        </div>
+      <!-- 📱 SCREEN 1: UPLOAD -->
+      <div id="screen-upload" class="screen active">
+        <header>
+          <h1>Upload PDF</h1>
+          <button
+            id="theme-toggle"
+            class="icon-btn theme-toggle"
+            title="Toggle Theme"
+          >
+            <i class="fa-solid fa-moon"></i>
+          </button>
+        </header>
 
-        <!-- 🔍 SCREEN 2: PREVIEW -->
-        <div id="screen-preview" class="screen">
-            <header>
-                <button class="icon-btn nav-back" data-target="screen-upload">
-                    <i class="fa-solid fa-arrow-left"></i>
-                </button>
-                <h1>Preview Options</h1>
-            </header>
-            
-            <main>
-                <div class="glass-panel preview-summary">
-                    <div class="file-icon-large">
-                        <i class="fa-solid fa-file-pdf"></i>
-                    </div>
-                    <h3 id="preview-filename" class="truncate" style="font-size: 1.1rem; width:100%; text-align:center;">filename.pdf</h3>
-                    <div id="preview-pagecount" class="page-count-badge">
-                        <i class="fa-solid fa-spinner fa-spin"></i> Loading pages...
-                    </div>
-                </div>
+        <main class="content-center">
+          <div class="glass-panel upload-area" id="upload-area">
+            <div class="upload-icon">
+              <i class="fa-solid fa-file-pdf"></i>
+            </div>
+            <h2>Select a file</h2>
+            <p>Tap here or drag & drop</p>
+            <p class="file-limits">Maximum size: 100MB</p>
+            <input type="file" id="pdf-input" accept="application/pdf" hidden />
+          </div>
 
-                <h3 class="options-heading">Split Options</h3>
-                
-                <div class="glass-panel option-card active" id="option-all">
-                    <div class="radio-custom">
-                        <input type="radio" name="split-mode" id="mode-all" value="all" checked>
-                        <label for="mode-all"></label>
-                    </div>
-                    <div class="option-content">
-                        <h4>Split all pages</h4>
-                        <p>Extract every page independently</p>
-                    </div>
-                </div>
-                
-                <div class="glass-panel option-card" id="option-range">
-                    <div class="radio-custom">
-                        <input type="radio" name="split-mode" id="mode-range" value="range">
-                        <label for="mode-range"></label>
-                    </div>
-                    <div class="option-content">
-                        <h4>Custom range</h4>
-                        <p>Select specific start and end pages</p>
-                        <div id="range-summary-badge" class="range-summary-badge hidden">
-                            <span id="range-summary-text">1 - 10</span>
-                        </div>
-                    </div>
-                </div>
+          <div id="selected-file-info" class="selected-file-info hidden">
+            <div class="file-details">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span id="file-name-display" class="truncate">filename.pdf</span>
+              <button
+                id="remove-file-btn"
+                class="icon-btn"
+                style="width: 32px; height: 32px; font-size: 1rem"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <span id="file-size-display" class="file-size">2.4 MB</span>
+          </div>
+        </main>
 
-                <!-- Range inputs rendered separately below the card -->
-                <div class="range-inputs-panel disabled" id="range-inputs">
-                    <div class="range-row">
-                        <div class="range-field">
-                            <span class="range-label">From page</span>
-                            <input type="number" id="range-start" min="1" placeholder="1">
-                        </div>
-                        <div class="range-arrow">
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                        <div class="range-field">
-                            <span class="range-label">To page</span>
-                            <input type="number" id="range-end" min="1" placeholder="10">
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Password Field -->
-                <div id="password-container" class="glass-panel hidden password-input-wrapper" style="padding:var(--space-md);">
-                    <div class="input-block" style="width:100%;">
-                        <label><i class="fa-solid fa-lock"></i> Password Protected PDF</label>
-                        <input type="password" id="pdf-password" placeholder="Enter password" style="margin-top:8px;">
-                        <p class="error-text hidden" id="password-error">Incorrect password</p>
-                    </div>
-                </div>
-            </main>
-            
-            <footer class="bottom-bar">
-                <button id="btn-split" class="btn primary-btn">
-                    <i class="fa-solid fa-scissors"></i> Split PDF
-                </button>
-            </footer>
-        </div>
+        <footer class="bottom-bar">
+          <button id="btn-next-upload" class="btn primary-btn" disabled>
+            Next <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </footer>
+      </div>
 
-        <!-- ⚙️ SCREEN 3: PROCESSING -->
-        <div id="screen-processing" class="screen">
-            <main class="content-center">
-                <div class="loader-wrapper">
-                    <div class="loader-circle"></div>
-                    <div class="loader-icon">
-                        <i class="fa-solid fa-bolt"></i>
-                    </div>
-                </div>
-                <h2>Processing PDF...</h2>
-                <p>Generating your split files.</p>
-            </main>
-        </div>
+      <!-- 🔍 SCREEN 2: PREVIEW -->
+      <div id="screen-preview" class="screen">
+        <header>
+          <button class="icon-btn nav-back" data-target="screen-upload">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <h1>Preview Options</h1>
+        </header>
 
-        <!-- ✅ SCREEN 4: SUCCESS -->
-        <div id="screen-success" class="screen">
-            <header>
-                <div class="success-header-col">
-                    <div class="success-icon-large">
-                        <i class="fa-solid fa-circle-check"></i>
-                    </div>
-                    <h1>Success!</h1>
-                    <p style="color:var(--success-color); font-weight:500;" id="success-count">0 pages extracted</p>
-                </div>
-            </header>
-            
-            <main>
-                <div class="glass-panel file-list-card">
-                    <div class="file-list-heading">
-                        <h3>Generated Files</h3>
-                        <span>Ready</span>
-                    </div>
-                    <div id="file-list" class="file-items">
-                        <!-- File items will be injected here -->
-                    </div>
-                </div>
-            </main>
-            
-            <footer class="bottom-bar">
-                <div style="display:flex; flex-direction:column; gap:12px; width:100%;">
-                    <button class="btn primary-btn" id="btn-download-all">
-                        <i class="fa-solid fa-download"></i> Download All (ZIP)
-                    </button>
-                    <button id="btn-start-over" class="btn secondary-btn">
-                        <i class="fa-solid fa-rotate-left"></i> Split Another PDF
-                    </button>
-                </div>
-            </footer>
-        </div>
+        <main>
+          <div class="glass-panel preview-summary">
+            <div class="file-icon-large">
+              <i class="fa-solid fa-file-pdf"></i>
+            </div>
+            <h3
+              id="preview-filename"
+              class="truncate"
+              style="font-size: 1.1rem; width: 100%; text-align: center"
+            >
+              filename.pdf
+            </h3>
+            <div id="preview-pagecount" class="page-count-badge">
+              <i class="fa-solid fa-spinner fa-spin"></i> Loading pages...
+            </div>
+          </div>
 
-        <!-- Toast Notification -->
-        <div id="toast" class="toast">Message</div>
+          <h3 class="options-heading">Split Options</h3>
+
+          <div class="glass-panel option-card active" id="option-all">
+            <div class="radio-custom">
+              <input
+                type="radio"
+                name="split-mode"
+                id="mode-all"
+                value="all"
+                checked
+              />
+              <label for="mode-all"></label>
+            </div>
+            <div class="option-content">
+              <h4>Split all pages</h4>
+              <p>Extract every page independently</p>
+            </div>
+          </div>
+
+          <div class="glass-panel option-card" id="option-range">
+            <div class="radio-custom">
+              <input
+                type="radio"
+                name="split-mode"
+                id="mode-range"
+                value="range"
+              />
+              <label for="mode-range"></label>
+            </div>
+            <div class="option-content">
+              <h4>Custom range</h4>
+              <p>Select specific start and end pages</p>
+              <div id="range-summary-badge" class="range-summary-badge hidden">
+                <span id="range-summary-text">1 - 10</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Range inputs rendered separately below the card -->
+          <div class="range-inputs-panel disabled" id="range-inputs">
+            <div class="range-row">
+              <div class="range-field">
+                <span class="range-label">From page</span>
+                <input type="number" id="range-start" min="1" placeholder="1" />
+              </div>
+              <div class="range-arrow">
+                <i class="fa-solid fa-arrow-right"></i>
+              </div>
+              <div class="range-separator">
+                <span>to</span>
+              </div>
+              <div class="range-field">
+                <span class="range-label">To page</span>
+                <input type="number" id="range-end" min="1" placeholder="10" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Password Field -->
+          <div
+            id="password-container"
+            class="glass-panel hidden password-input-wrapper"
+            style="padding: var(--space-md)"
+          >
+            <div class="input-block" style="width: 100%">
+              <label
+                ><i class="fa-solid fa-lock"></i> Password Protected PDF</label
+              >
+              <input
+                type="password"
+                id="pdf-password"
+                placeholder="Enter password"
+                style="margin-top: 8px"
+              />
+              <p class="error-text hidden" id="password-error">
+                Incorrect password
+              </p>
+            </div>
+          </div>
+        </main>
+
+        <footer class="bottom-bar">
+          <button id="btn-split" class="btn primary-btn">
+            <i class="fa-solid fa-scissors"></i> Split PDF
+          </button>
+        </footer>
+      </div>
+
+      <!-- ⚙️ SCREEN 3: PROCESSING -->
+      <div id="screen-processing" class="screen">
+        <main class="content-center">
+          <div class="loader-wrapper">
+            <div class="loader-circle"></div>
+            <div class="loader-icon">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+          </div>
+          <h2>Processing PDF...</h2>
+          <p>Generating your split files.</p>
+        </main>
+      </div>
+
+      <!-- ✅ SCREEN 4: SUCCESS -->
+      <div id="screen-success" class="screen">
+        <header>
+          <div class="success-header-col">
+            <div class="success-icon-large">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h1>Success!</h1>
+            <p
+              style="color: var(--success-color); font-weight: 500"
+              id="success-count"
+            >
+              0 pages extracted
+            </p>
+          </div>
+        </header>
+
+        <main>
+          <div class="glass-panel file-list-card">
+            <div class="file-list-heading">
+              <h3>Generated Files</h3>
+              <span>Ready</span>
+            </div>
+            <div id="file-list" class="file-items">
+              <!-- File items will be injected here -->
+            </div>
+          </div>
+        </main>
+
+        <footer class="bottom-bar">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+              width: 100%;
+            "
+          >
+            <button class="btn primary-btn" id="btn-download-all">
+              <i class="fa-solid fa-download"></i> Download All (ZIP)
+            </button>
+            <button id="btn-start-over" class="btn secondary-btn">
+              <i class="fa-solid fa-rotate-left"></i> Split Another PDF
+            </button>
+          </div>
+        </footer>
+      </div>
+
+      <!-- Toast Notification -->
+      <div id="toast" class="toast">Message</div>
     </div>
 
     <script src="app.js"></script>
-</body>
+  </body>
 </html>
