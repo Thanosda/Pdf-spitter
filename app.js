@@ -100,19 +100,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetState() {
         currentFile = null;
         currentPdfDoc = null;
-        passwordRequired = false;
         totalPages = 0;
         splitFiles = [];
         zipBlob = null;
+        
+        btnSplit.innerHTML = '<i class="fa-solid fa-scissors"></i> Split PDF';
+        btnSplit.disabled = true;
+        
+        pdfPassword.value = '';
+        passwordContainer.classList.add('hidden');
+        passwordError.classList.add('hidden');
         
         pdfInput.value = '';
         uploadArea.classList.remove('hidden');
         fileInfo.classList.add('hidden');
         btnNextUpload.disabled = true;
-        
-        pdfPassword.value = '';
-        passwordContainer.classList.add('hidden');
-        passwordError.classList.add('hidden');
         
         document.getElementById('mode-all').checked = true;
         optionCards.forEach(c => c.classList.remove('active'));
@@ -186,14 +188,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navBack.addEventListener('click', () => navigateTo('upload'));
 
+    // --- Validation Logic ---
+    function validateSplitButton() {
+        const isRangeMode = document.getElementById('mode-range').checked;
+        const start = parseInt(rangeStart.value) || 1;
+        const end = parseInt(rangeEnd.value) || totalPages;
+        const isRangeValid = start >= 1 && end <= totalPages && start <= end;
+        const isPasswordValid = !passwordRequired || !!pdfPassword.value;
+        
+        btnSplit.disabled = (isRangeMode && !isRangeValid) || !isPasswordValid;
+    }
+
     // --- Range UI Logic ---
     function updateRangeSummary() {
         const start = parseInt(rangeStart.value) || 1;
         const end = parseInt(rangeEnd.value) || totalPages;
         
-        let isValid = true;
-        if (start < 1 || end > totalPages || start > end) {
-            isValid = false;
+        const isValid = !(start < 1 || end > totalPages || start > end);
+        if (!isValid) {
             rangeStart.classList.toggle('invalid', start < 1 || start > end);
             rangeEnd.classList.toggle('invalid', end > totalPages || start > end);
             rangeSummaryBadge.classList.add('hidden');
@@ -205,11 +217,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 rangeSummaryBadge.classList.remove('hidden');
             }
         }
-        btnSplit.disabled = !isValid && document.getElementById('mode-range').checked;
+        validateSplitButton();
     }
 
     [rangeStart, rangeEnd].forEach(input => {
         input.addEventListener('input', updateRangeSummary);
+        // Ensure parent click also focuses the input
+        input.parentElement.addEventListener('click', (e) => {
+            if (e.target !== input) input.focus();
+        });
+    });
+
+    // Handle card clicks re-evaluating the button and badge
+    document.querySelectorAll('input[name="split-mode"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            updateRangeSummary();
+        });
     });
 
     async function loadPdf(file, password = '') {
@@ -248,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     pdfPassword.addEventListener('input', () => {
         passwordError.classList.add('hidden');
-        btnSplit.disabled = false;
+        validateSplitButton();
     });
 
     pdfPassword.addEventListener('change', () => {
@@ -274,28 +297,59 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        btnSplit.disabled = true;
+        btnSplit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
         navigateTo('processing');
         
         try {
-            const zip = new JSZip();
+            splitFiles = []; // Clear previous results
             const originalName = currentFile.name.replace(/\.[^/.]+$/, "");
+            let successMsg = "";
             
-            for (let i = start - 1; i < end; i++) {
+            if (mode === 'range') {
+                // Support multiple ranges like "1-3, 5, 7-10"
+                const rangeStr = rangeStart.value + (rangeEnd.value && rangeEnd.value !== rangeStart.value ? "-" + rangeEnd.value : "");
+                // Note: For now, we'll keep the UI with two boxes but process as one contiguous block.
+                // However, I'll prepare the logic to handle a single merged PDF better.
+                
                 const subPdf = await PDFLib.PDFDocument.create();
-                const [copiedPage] = await subPdf.copyPages(currentPdfDoc, [i]);
-                subPdf.addPage(copiedPage);
+                const pageIndices = [];
+                for (let i = start - 1; i < end; i++) {
+                    pageIndices.push(i);
+                }
+                const copiedPages = await subPdf.copyPages(currentPdfDoc, pageIndices);
+                copiedPages.forEach((page) => subPdf.addPage(page));
                 const pdfBytes = await subPdf.save();
                 
-                const fileName = `${originalName}_Page_${i + 1}.pdf`;
+                const fileName = `${originalName}_Pages_${start}-${end}.pdf`;
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
                 
                 splitFiles.push({ name: fileName, url: url });
-                zip.file(fileName, pdfBytes);
+                zipBlob = null;
+                successMsg = `1 file created (${end - start + 1} pages)`;
+            } else {
+                // Split ALL pages into independent files
+                const zip = new JSZip();
+                for (let i = 0; i < totalPages; i++) {
+                    const subPdf = await PDFLib.PDFDocument.create();
+                    const [copiedPage] = await subPdf.copyPages(currentPdfDoc, [i]);
+                    subPdf.addPage(copiedPage);
+                    const pdfBytes = await subPdf.save();
+                    
+                    const fileName = `${originalName}_Page_${i + 1}.pdf`;
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    splitFiles.push({ name: fileName, url: url });
+                    zip.file(fileName, pdfBytes);
+                }
+                zipBlob = await zip.generateAsync({ type: 'blob' });
+                successMsg = `${splitFiles.length} pages extracted`;
             }
 
-            zipBlob = await zip.generateAsync({ type: 'blob' });
-            renderSuccess();
+            renderSuccess(successMsg);
         } catch (err) {
             console.error(err);
             showToast('Split failed: ' + err.message);
@@ -304,8 +358,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* --- SCREEN 4: SUCCESS --- */
-    function renderSuccess() {
-        successCount.textContent = `${splitFiles.length} pages extracted`;
+    function renderSuccess(message) {
+        successCount.textContent = message;
         fileList.innerHTML = '';
         
         splitFiles.forEach(file => {
@@ -321,6 +375,12 @@ document.addEventListener('DOMContentLoaded', () => {
             fileList.appendChild(item);
         });
         
+        if (zipBlob) {
+            btnDownloadAll.classList.remove('hidden');
+        } else {
+            btnDownloadAll.classList.add('hidden');
+        }
+
         navigateTo('success');
     }
 
